@@ -227,3 +227,119 @@ def generate_purchase_order(ingredient_demand):
 
 # Generate the purchase order
 generate_purchase_order(ingredient_demand)
+
+
+
+PIZZA:
+# Load the sales data (Pizza_Sale file)
+sales_data = pd.read_excel('C:/Users/Sai.Vigneshwar/OneDrive - Collaborate 365/Sai data (30-05-23)/Desktop/Sai/Python/Guvi/Dominos/Pizza_Sale.xlsx')
+
+
+# Load the ingredient data (Pizza_ingredients file)
+ingredient_data = pd.read_excel('C:/Users/Sai.Vigneshwar/OneDrive - Collaborate 365/Sai data (30-05-23)/Desktop/Sai/Python/Guvi/Dominos/Pizza_ingredients.xlsx')
+
+# Converting order_date to datetime format
+sales_data['order_date'] = pd.to_datetime(sales_data['order_date'])
+
+
+# Check if pizza names match in both files
+print(sales_data['pizza_name'].unique())  # Check unique pizza names in sales data
+print(ingredient_data['pizza_name'].unique())  # Check unique pizza names in ingredient data
+
+# Model Selection: Prophet for time series forecasting
+
+# Prepare data for Prophet (requires 'ds' as date and 'y' as the target variable)
+prophet_data = sales_data[['order_date', 'quantity']].rename(columns={'order_date': 'ds', 'quantity': 'y'})
+
+# Initialize the Prophet model
+model = Prophet()
+
+# Train the model
+model.fit(prophet_data)
+
+# Make future predictions (forecast for the next 7 days)
+future = model.make_future_dataframe(periods=7)
+forecast = model.predict(future)
+
+# Extract the predicted sales for the next week
+predicted_sales = forecast[['ds', 'yhat']].tail(7)
+print(predicted_sales)
+
+# Forecasted pizza sales for the test (use actual forecast results in production)
+forecasted_pizza_sales = {
+    'The Hawaiian Pizza': 100, 
+    'The Classic Deluxe Pizza': 90,  
+    'The Five Cheese Pizza': 120,  
+    'The Italian Supreme Pizza': 80,  
+    'The Mexicana Pizza': 110,
+    'The Thai Chicken Pizza': 105,
+    'The Prosciutto and Arugula Pizza': 95,
+    'The Barbecue Chicken Pizza': 115,
+    'The Greek Pizza': 80,
+    'The Spinach Supreme Pizza': 85,
+    'The Green Garden Pizza': 60,
+    'The Italian Capocollo Pizza': 100,
+    'The Spicy Italian Pizza': 90,
+    'The Spinach Pesto Pizza': 75,
+    'The Vegetables + Vegetables Pizza': 50,
+    'The Southwest Chicken Pizza': 85,
+    'The California Chicken Pizza': 100,
+    'The Pepperoni Pizza': 130,
+    'The Chicken Pesto Pizza': 90,
+    'The Big Meat Pizza': 120,
+    'The Soppressata Pizza': 80,
+    'The Four Cheese Pizza': 110,
+    'The Napolitana Pizza': 95,
+    'The Calabrese Pizza': 90,
+    'The Italian Vegetables Pizza': 60,
+    'The Mediterranean Pizza': 70,
+    'The Pepper Salami Pizza': 100,
+    'The Spinach and Feta Pizza': 90,
+    'The Sicilian Pizza': 85,
+    'The Chicken Alfredo Pizza': 105,
+    'The Pepperoni, Mushroom, and Peppers Pizza': 120,
+    'The Brie Carre Pizza': 75
+}
+
+# Now, calculate ingredient demand based on forecasted sales and the ingredients
+
+# Step 1: Merge the sales and ingredient data based on pizza_name
+merged_data = pd.merge(sales_data, ingredient_data, on='pizza_name', how='inner')
+
+# Step 2: Calculate ingredient demand based on forecast
+ingredient_demand = {}
+
+# Loop through each pizza in the forecast and aggregate ingredients
+for pizza, sales_quantity in forecasted_pizza_sales.items():
+    # Filter the ingredient data for the current pizza
+    pizza_ingredients = ingredient_data[ingredient_data['pizza_name'] == pizza]
+    
+    # Calculate ingredient quantities for the forecasted sales
+    for idx, row in pizza_ingredients.iterrows():
+        ingredient = row['pizza_ingredients']
+        qty_per_pizza = row['Items_Qty_In_Grams']  # Quantity of each ingredient per pizza
+        
+        # Total quantity needed
+        total_qty_needed = sales_quantity * qty_per_pizza
+        
+        # Aggregate demand for each ingredient
+        if ingredient in ingredient_demand:
+            ingredient_demand[ingredient] += total_qty_needed
+        else:
+            ingredient_demand[ingredient] = total_qty_needed
+
+# Print the total ingredient demand
+for ingredient, total_qty in ingredient_demand.items():
+    print(f"Ingredient: {ingredient}, Total Quantity Needed: {total_qty:.2f} grams")
+    #print(f"Ingredient: {ingredient}, Total Quantity Needed: {total_qty:.2f} quantum")
+    
+# Generate Purchase Order
+def generate_purchase_order(ingredient_demand):
+    print("\nPurchase Order:")
+    print("----------------------------")
+    for ingredient, total_qty in ingredient_demand.items():
+        print(f"{ingredient}: {total_qty:.2f} grams required")
+        #print(f"{ingredient}: {total_qty:.2f} quantum required")
+
+# Generate the purchase order
+generate_purchase_order(ingredient_demand)
